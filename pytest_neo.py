@@ -53,10 +53,9 @@ class NeoTerminalReporter(TerminalReporter):
             curses.init_pair(i, i, -1)
 
         self.COLOR_CHAIN = itertools.cycle([
-            curses.color_pair(2),
-            curses.color_pair(2) ^ curses.A_BOLD,
-            curses.color_pair(10),
             curses.color_pair(10) ^ curses.A_BOLD,
+            curses.color_pair(2),
+            curses.color_pair(10),
         ])
 
     @pytest.hookimpl(trylast=True)
@@ -85,22 +84,32 @@ class NeoTerminalReporter(TerminalReporter):
     def _write_progress_information_filling_space(self):
         pass
 
+    def prepare_fspath(self):
+        return pathlib.Path(self.currentfspath).stem.replace('_', '|')[5:]
+
+    def write_new_column(self):
+        self.column_color = next(self.COLOR_CHAIN)
+        fspath = self.prepare_fspath()
+        for top, letter in enumerate(fspath):
+            self.stdscr.addstr(
+                top, self.left,
+                letter, self.column_color
+            )
+            self.stdscr.refresh()
+        self.top = len(fspath)
+
     def write_fspath_result(self, nodeid, res):
         fspath = self.config.rootdir.join(nodeid.split("::")[0])
         if fspath != self.currentfspath:
-            self.column_color = next(self.COLOR_CHAIN)
             if self.currentfspath is not None:
                 self._write_progress_information_filling_space()
             self.currentfspath = fspath
-            fspath = pathlib.Path(fspath).stem.replace('_', '|')[5:]
             self.left += 2
-            for top, letter in enumerate(fspath):
-                self.stdscr.addstr(
-                    top, self.left,
-                    letter,  self.column_color
-                )
-                self.stdscr.refresh()
-            self.top = len(fspath)
+            try:
+                self.write_new_column()
+            except curses.error:
+                self.left = 1
+                self.write_new_column()
 
     def pytest_runtest_logreport(self, report):
         rep = report
@@ -121,9 +130,10 @@ class NeoTerminalReporter(TerminalReporter):
                 letter, self.column_color
             )
             self.stdscr.refresh()
-        except curses.error as e:
-            pass
-        self.top += 1
+            self.top += 1
+        except curses.error:
+            self.left += 1
+            self.write_new_column()
 
 
 def pytest_report_teststatus(report):
