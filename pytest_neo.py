@@ -18,7 +18,7 @@ import pytest
 from _pytest.terminal import TerminalReporter
 
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 
 @pytest.mark.trylast
@@ -35,8 +35,8 @@ def pytest_configure(config):
 class NeoTerminalReporter(TerminalReporter):
     def __init__(self, config, file=None):
         super().__init__(config, file)
-        self.left = -1
-        self.top = 1
+        self.left = -2
+        self.top = 0
         self.stdscr = None
         self.column_color = None
         self.COLOR_CHAIN = []
@@ -87,16 +87,43 @@ class NeoTerminalReporter(TerminalReporter):
     def prepare_fspath(self):
         return pathlib.Path(self.currentfspath).stem.replace('_', '|')[5:]
 
+    def can_write(self):
+        max_y, max_x = self.stdscr.getmaxyx()
+        if (max_y - 1, max_x - 1) == (self.top, self.left):
+            return False
+        if self.top >= max_y:
+            return False
+        if self.left >= max_x:
+            return False
+        return True
+
+    def fix_coordinate(self):
+        max_y, max_x = self.stdscr.getmaxyx()
+        if (max_y - 1, max_x - 1) == (self.top, self.left):
+            self.top = 0
+            self.left += 1
+        if self.top >= max_y:
+            self.top = 0
+            self.left += 1
+        if self.left >= max_x:
+            self.left = 0
+
+    def addstr(self, letter, color):
+        self.fix_coordinate()
+        self.stdscr.addstr(
+            self.top, self.left,
+            letter, color
+        )
+
     def write_new_column(self):
         self.column_color = next(self.COLOR_CHAIN)
         fspath = self.prepare_fspath()
-        for top, letter in enumerate(fspath):
-            self.stdscr.addstr(
-                top, self.left,
-                letter, self.column_color
-            )
+
+        self.top = 0
+        for letter in fspath:
+            self.addstr(letter, self.column_color)
             self.stdscr.refresh()
-        self.top = len(fspath)
+            self.top += 1
 
     def write_fspath_result(self, nodeid, res):
         fspath = self.config.rootdir.join(nodeid.split("::")[0])
@@ -105,11 +132,10 @@ class NeoTerminalReporter(TerminalReporter):
                 self._write_progress_information_filling_space()
             self.currentfspath = fspath
             self.left += 2
-            try:
-                self.write_new_column()
-            except curses.error:
-                self.left = 1
-                self.write_new_column()
+            _, max_x = self.stdscr.getmaxyx()
+            if self.left >= max_x:
+                self.left = 0
+            self.write_new_column()
 
     def pytest_runtest_logreport(self, report):
         rep = report
@@ -117,23 +143,17 @@ class NeoTerminalReporter(TerminalReporter):
         cat, letter, word = res
         if isinstance(word, tuple):
             word, markup = word
-        else:
-            markup = None
         self.stats.setdefault(cat, []).append(rep)
         self._tests_ran = True
         if not letter and not word:
             # probably passed setup/teardown
             return
-        try:
-            self.stdscr.addstr(
-                self.top, self.left,
-                letter, self.column_color
-            )
-            self.stdscr.refresh()
-            self.top += 1
-        except curses.error:
+        if not self.can_write():
             self.left += 1
             self.write_new_column()
+        self.addstr(letter, self.column_color)
+        self.stdscr.refresh()
+        self.top += 1
 
 
 def pytest_report_teststatus(report):
