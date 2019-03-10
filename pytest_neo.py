@@ -41,6 +41,7 @@ class NeoTerminalReporter(TerminalReporter):
         self.column_color = None
         self.COLOR_CHAIN = []
         self.previous_char = None
+        self.history = {}
 
     def tearup(self):
         self.stdscr = curses.initscr()
@@ -65,15 +66,53 @@ class NeoTerminalReporter(TerminalReporter):
             curses.nocbreak()
             curses.endwin()
 
+    def print_history(self):
+        _, max_x = self.stdscr.getmaxyx()
+        part_count = int(max_x / 2)
+        history = sorted(
+            (self.prepare_fspath(name), tests)
+            for name, tests in self.history.items()
+        )
+        while history:
+            history_part = history[:part_count]
+            history = history[part_count:]
+            columns = []
+            for name, tests in history_part:
+                column = name + ''.join(test for test in tests)
+                columns.append(column)
+            row_num = 0
+            while True:
+                was_entry = False
+                color_chain = itertools.cycle([
+                    '\033[1;38;5;10m{}\033[0m',
+                    '\033[0;38;5;2m{}\033[0m',
+                    '\033[0;38;5;10m{}\033[0m',
+                ])
+                for column in columns:
+                    color = next(color_chain)
+                    if len(column) > row_num:
+                        letter = column[row_num]
+                        self._tw.write(color.format(letter))
+                        was_entry = True
+                    else:
+                        self._tw.write(' ')
+                    self._tw.write(' ')
+                self._tw.write('\n')
+                if not was_entry:
+                    break
+                row_num += 1
+
     def summary_stats(self):
         self.teardown()
+        self.print_history()
         super().summary_stats()
 
     def _write_progress_information_filling_space(self):
         pass
 
-    def prepare_fspath(self):
-        return pathlib.Path(self.currentfspath).stem.replace('_', '|')[5:]
+    @staticmethod
+    def prepare_fspath(fspath):
+        return pathlib.Path(fspath).stem.replace('_', '|')[5:]
 
     def can_write(self, top, left):
         max_y, max_x = self.stdscr.getmaxyx()
@@ -115,7 +154,7 @@ class NeoTerminalReporter(TerminalReporter):
 
     def write_new_column(self):
         self.column_color = next(self.COLOR_CHAIN)
-        fspath = self.prepare_fspath()
+        fspath = self.prepare_fspath(self.currentfspath)
 
         self.clear_column(self.left)
         self.clear_column(self.left + 1)
@@ -137,6 +176,7 @@ class NeoTerminalReporter(TerminalReporter):
             if self.left >= max_x:
                 self.left = 0
             self.write_new_column()
+            self.history[self.currentfspath] = []
 
     @pytest.hookimpl(trylast=True)
     def pytest_collection_modifyitems(self):
@@ -167,6 +207,7 @@ class NeoTerminalReporter(TerminalReporter):
             self.write_new_column()
         self.addstr(letter, self.column_color)
         self.stdscr.refresh()
+        self.history[self.currentfspath].append(letter)
         self.top += 1
 
 
