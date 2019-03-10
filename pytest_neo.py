@@ -40,6 +40,7 @@ class NeoTerminalReporter(TerminalReporter):
         self.stdscr = None
         self.column_color = None
         self.COLOR_CHAIN = []
+        self.previous_char = None
 
     def tearup(self):
         self.stdscr = curses.initscr()
@@ -58,24 +59,11 @@ class NeoTerminalReporter(TerminalReporter):
             curses.color_pair(10),
         ])
 
-    @pytest.hookimpl(trylast=True)
-    def pytest_collection_modifyitems(self):
-        super().pytest_collection_modifyitems()
-        self.tearup()
-
     def teardown(self):
         if self.stdscr:
             curses.echo()
             curses.nocbreak()
             curses.endwin()
-
-    def pytest_keyboard_interrupt(self, excinfo):
-        self.teardown()
-        super().pytest_keyboard_interrupt(excinfo)
-
-    def pytest_internalerror(self, excrepr):
-        self.teardown()
-        return super().pytest_internalerror(excrepr)
 
     def summary_stats(self):
         self.teardown()
@@ -87,13 +75,13 @@ class NeoTerminalReporter(TerminalReporter):
     def prepare_fspath(self):
         return pathlib.Path(self.currentfspath).stem.replace('_', '|')[5:]
 
-    def can_write(self):
+    def can_write(self, top, left):
         max_y, max_x = self.stdscr.getmaxyx()
-        if (max_y - 1, max_x - 1) == (self.top, self.left):
+        if (max_y - 1, max_x - 1) == (top, left):
             return False
-        if self.top >= max_y:
+        if top >= max_y:
             return False
-        if self.left >= max_x:
+        if left >= max_x:
             return False
         return True
 
@@ -110,14 +98,27 @@ class NeoTerminalReporter(TerminalReporter):
 
     def addstr(self, letter, color):
         self.fix_coordinate()
+        if self.previous_char:
+            self.stdscr.addstr(*self.previous_char)
         self.stdscr.addstr(
             self.top, self.left,
-            letter, color
+            letter, curses.color_pair(0) ^ curses.A_BOLD
         )
+        self.previous_char = self.top, self.left, letter, color
+
+    def clear_column(self, left):
+        max_y, max_x = self.stdscr.getmaxyx()
+        for top in range(max_y):
+            if self.can_write(top, left):
+                self.stdscr.addstr(top, left, ' ')
+        self.stdscr.refresh()
 
     def write_new_column(self):
         self.column_color = next(self.COLOR_CHAIN)
         fspath = self.prepare_fspath()
+
+        self.clear_column(self.left)
+        self.clear_column(self.left + 1)
 
         self.top = 0
         for letter in fspath:
@@ -137,6 +138,19 @@ class NeoTerminalReporter(TerminalReporter):
                 self.left = 0
             self.write_new_column()
 
+    @pytest.hookimpl(trylast=True)
+    def pytest_collection_modifyitems(self):
+        super().pytest_collection_modifyitems()
+        self.tearup()
+
+    def pytest_keyboard_interrupt(self, excinfo):
+        self.teardown()
+        super().pytest_keyboard_interrupt(excinfo)
+
+    def pytest_internalerror(self, excrepr):
+        self.teardown()
+        return super().pytest_internalerror(excrepr)
+
     def pytest_runtest_logreport(self, report):
         rep = report
         res = pytest_report_teststatus(report=rep)
@@ -148,7 +162,7 @@ class NeoTerminalReporter(TerminalReporter):
         if not letter and not word:
             # probably passed setup/teardown
             return
-        if not self.can_write():
+        if not self.can_write(self.top, self.left):
             self.left += 1
             self.write_new_column()
         self.addstr(letter, self.column_color)
