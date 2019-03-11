@@ -224,10 +224,14 @@ class NeoTerminalReporter(TerminalReporter):
         if not letter and not word:
             # probably passed setup/teardown
             return
-        if not self.can_write(self.top, self.left):
-            self.left += 1
-            self.write_new_column()
-        self.addstr(letter, self.column_color)
-        self.stdscr.refresh()
-        self.history[self.currentfspath].append(letter)
-        self.top += 1
+        if report.when == 'setup':
+            if not self.can_write(self.top, self.left):
+                self.left += 1
+                self.write_new_column()
+        if report.when == 'teardown':
+            self.top += 1
+        else:
+            self.addstr(letter, self.column_color)
+            self.stdscr.refresh()
+            if report.when == 'call' or report.skipped:
+                self.history[self.currentfspath].append(letter)
