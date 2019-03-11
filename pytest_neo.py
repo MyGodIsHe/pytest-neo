@@ -21,15 +21,37 @@ from _pytest.terminal import TerminalReporter
 __version__ = '0.1.1'
 
 
+IS_NEO_ENABLED = False
+
+
 @pytest.mark.trylast
 def pytest_configure(config):
+    global IS_NEO_ENABLED
+
     if config.option.verbose > 0:
         return
+
+    IS_NEO_ENABLED = True
+
     # Get the standard terminal reporter plugin and replace it with our
     standard_reporter = config.pluginmanager.getplugin('terminalreporter')
     config.pluginmanager.unregister(standard_reporter)
     neo_reporter = NeoTerminalReporter(config, sys.stdout)
     config.pluginmanager.register(neo_reporter, 'terminalreporter')
+
+
+def pytest_report_teststatus(report):
+    if not IS_NEO_ENABLED:
+        return
+    if report.passed:
+        letter = "."
+    elif report.skipped:
+        letter = "s"
+    elif report.failed:
+        letter = "F"
+        if report.when != "call":
+            letter = "f"
+    return report.outcome, letter, report.outcome.upper()
 
 
 class NeoTerminalReporter(TerminalReporter):
@@ -209,15 +231,3 @@ class NeoTerminalReporter(TerminalReporter):
         self.stdscr.refresh()
         self.history[self.currentfspath].append(letter)
         self.top += 1
-
-
-def pytest_report_teststatus(report):
-    if report.passed:
-        letter = "."
-    elif report.skipped:
-        letter = "s"
-    elif report.failed:
-        letter = "F"
-        if report.when != "call":
-            letter = "f"
-    return report.outcome, letter, report.outcome.upper()
