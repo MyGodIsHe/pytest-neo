@@ -65,9 +65,10 @@ class NeoTerminalReporter(TerminalReporter):
             curses.echo()
             curses.nocbreak()
             curses.endwin()
+            _, max_x = self.stdscr.getmaxyx()
+            self.print_history(max_x)
 
-    def print_history(self):
-        _, max_x = self.stdscr.getmaxyx()
+    def print_history(self, max_x):
         part_count = int(max_x / 2)
         history = sorted(
             (self.prepare_fspath(name), tests)
@@ -104,7 +105,6 @@ class NeoTerminalReporter(TerminalReporter):
 
     def summary_stats(self):
         self.teardown()
-        self.print_history()
         super().summary_stats()
 
     def _write_progress_information_filling_space(self):
