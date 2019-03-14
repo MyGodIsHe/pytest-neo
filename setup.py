@@ -19,14 +19,20 @@ def get_version(filename):
     raise RuntimeError("Unable to find version string.")
 
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
+
 setup(
     name='pytest-neo',
     description=(
-        'pytest-neo is a plugin for pytest that changes the default'
-        ' look and feel of pytest.'
+        'pytest-neo is a plugin for pytest that shows'
+        'tests like screen of Matrix.'
     ),
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     version=get_version('pytest_neo.py'),
-    license='BSD',
+    license='MIT',
     author='Ilya Chistyakov',
     author_email='ilchistyakov@gmail.com',
     py_modules=['pytest_neo'],
@@ -40,9 +46,17 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Operating System :: POSIX',
+        'Operating System :: MacOS :: MacOS X',
         'Topic :: Software Development :: Testing',
         'Topic :: Software Development :: Libraries',
         'Topic :: Utilities',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: Implementation :: PyPy',
     ]
 )
