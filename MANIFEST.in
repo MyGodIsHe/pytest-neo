@@ -1,0 +1,3 @@
+include README.md CONTRIBUTORS.rst CHANGES.rst LICENSE
+include test_neo.py
+include tox.ini
