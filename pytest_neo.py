@@ -18,7 +18,7 @@ import pytest
 from _pytest.terminal import TerminalReporter
 
 
-__version__ = '0.1.1'
+__version__ = '0.1.0'
 
 
 IS_NEO_ENABLED = False
