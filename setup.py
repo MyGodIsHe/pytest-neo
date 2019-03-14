@@ -19,7 +19,7 @@ def get_version(filename):
     raise RuntimeError("Unable to find version string.")
 
 
-with open("README.md", "r") as fh:
+with open("README.rst", "r") as fh:
     long_description = fh.read()
 
 
@@ -30,9 +30,7 @@ setup(
         'tests like screen of Matrix.'
     ),
     long_description=long_description,
-    long_description_content_type='text/markdown',
     version=get_version('pytest_neo.py'),
-    url='https://github.com/MyGodIsHe/pytest-neo',
     license='MIT',
     author='Ilya Chistyakov',
     author_email='ilchistyakov@gmail.com',
@@ -59,5 +57,8 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: Implementation :: PyPy',
-    ]
+    ],
+    project_urls={
+        'Source': 'https://github.com/MyGodIsHe/pytest-neo',
+    },
 )
