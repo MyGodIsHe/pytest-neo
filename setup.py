@@ -26,7 +26,7 @@ with open("README.rst", "r") as fh:
 setup(
     name='pytest-neo',
     description=(
-        'pytest-neo is a plugin for pytest that shows'
+        'pytest-neo is a plugin for pytest that shows '
         'tests like screen of Matrix.'
     ),
     long_description=long_description,
