@@ -32,6 +32,7 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     version=get_version('pytest_neo.py'),
+    url='https://github.com/MyGodIsHe/pytest-neo',
     license='MIT',
     author='Ilya Chistyakov',
     author_email='ilchistyakov@gmail.com',
