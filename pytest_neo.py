@@ -11,14 +11,14 @@ and feel of py.test.
 """
 import curses
 import itertools
-import pathlib
+import os
 import sys
 
 import pytest
 from _pytest.terminal import TerminalReporter
 
 
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 
 
 IS_NEO_ENABLED = False
@@ -56,7 +56,7 @@ def pytest_report_teststatus(report):
 
 class NeoTerminalReporter(TerminalReporter):
     def __init__(self, config, file=None):
-        super().__init__(config, file)
+        super(NeoTerminalReporter, self).__init__(config, file)
         self.left = -2
         self.top = 0
         self.stdscr = None
@@ -127,14 +127,18 @@ class NeoTerminalReporter(TerminalReporter):
 
     def summary_stats(self):
         self.teardown()
-        super().summary_stats()
+        super(NeoTerminalReporter, self).summary_stats()
 
     def _write_progress_information_filling_space(self):
         pass
 
     @staticmethod
     def prepare_fspath(fspath):
-        return pathlib.Path(fspath).stem.replace('_', '|')[5:]
+        name = os.path.basename(str(fspath))
+        name = os.path.splitext(name)[0]
+        if name.startswith('test_'):
+            name = name[5:]
+        return name.replace('_', '|')
 
     def can_write(self, top, left):
         max_y, max_x = self.stdscr.getmaxyx()
@@ -202,16 +206,16 @@ class NeoTerminalReporter(TerminalReporter):
 
     @pytest.hookimpl(trylast=True)
     def pytest_collection_modifyitems(self):
-        super().pytest_collection_modifyitems()
+        super(NeoTerminalReporter, self).pytest_collection_modifyitems()
         self.tearup()
 
     def pytest_keyboard_interrupt(self, excinfo):
         self.teardown()
-        super().pytest_keyboard_interrupt(excinfo)
+        super(NeoTerminalReporter, self).pytest_keyboard_interrupt(excinfo)
 
     def pytest_internalerror(self, excrepr):
         self.teardown()
-        return super().pytest_internalerror(excrepr)
+        return super(NeoTerminalReporter, self).pytest_internalerror(excrepr)
 
     def pytest_runtest_logreport(self, report):
         rep = report
