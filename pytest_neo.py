@@ -18,7 +18,7 @@ import pytest
 from _pytest.terminal import TerminalReporter
 
 
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 
 
 IS_NEO_ENABLED = False
@@ -64,6 +64,7 @@ class NeoTerminalReporter(TerminalReporter):
         self.COLOR_CHAIN = []
         self.previous_char = None
         self.history = {}
+        self._show_progress_info = False
 
     def tearup(self):
         self.stdscr = curses.initscr()
@@ -125,12 +126,9 @@ class NeoTerminalReporter(TerminalReporter):
                     break
                 row_num += 1
 
-    def summary_stats(self):
+    def summary_errors(self):
         self.teardown()
-        super(NeoTerminalReporter, self).summary_stats()
-
-    def _write_progress_information_filling_space(self):
-        pass
+        return super(NeoTerminalReporter, self).summary_errors()
 
     @staticmethod
     def prepare_fspath(fspath):
@@ -194,8 +192,6 @@ class NeoTerminalReporter(TerminalReporter):
     def write_fspath_result(self, nodeid, res):
         fspath = self.config.rootdir.join(nodeid.split("::")[0])
         if fspath != self.currentfspath:
-            if self.currentfspath is not None:
-                self._write_progress_information_filling_space()
             self.currentfspath = fspath
             self.left += 2
             _, max_x = self.stdscr.getmaxyx()
@@ -208,10 +204,6 @@ class NeoTerminalReporter(TerminalReporter):
     def pytest_collection_modifyitems(self):
         super(NeoTerminalReporter, self).pytest_collection_modifyitems()
         self.tearup()
-
-    def pytest_keyboard_interrupt(self, excinfo):
-        self.teardown()
-        super(NeoTerminalReporter, self).pytest_keyboard_interrupt(excinfo)
 
     def pytest_internalerror(self, excrepr):
         self.teardown()
