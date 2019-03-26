@@ -97,7 +97,7 @@ class NeoTerminalReporter(TerminalReporter):
         curses.noecho()
         try:
             curses.cbreak()
-        except:  # hack for tests
+        except curses.error:  # hack for tests
             pass
         curses.curs_set(0)
         curses.start_color()
@@ -105,7 +105,7 @@ class NeoTerminalReporter(TerminalReporter):
         try:
             for i in range(0, curses.COLORS):
                 curses.init_pair(i, i, -1)
-        except:  # hack for tests
+        except curses.error:  # hack for tests
             pass
 
         self.COLOR_CHAIN = itertools.cycle([
@@ -120,11 +120,11 @@ class NeoTerminalReporter(TerminalReporter):
             curses.echo()
             try:
                 curses.nocbreak()
-            except:  # hack for tests
+            except curses.error:  # hack for tests
                 pass
             try:
                 curses.endwin()
-            except:  # hack for tests
+            except curses.error:  # hack for tests
                 pass
             _, max_x = self.stdscr.getmaxyx()
             self.print_history(max_x)
