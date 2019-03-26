@@ -69,21 +69,7 @@ class TestTerminalReporter(object):
         output = testdir.runpytest(
             '--force-neo'
         ).stdout.str()
-        assert 'test_new_summary.py:3 test_sample' in strip_colors(output)
-
-    def test_old_summary(self, testdir):
-        testdir.makepyfile(
-            """
-            import pytest
-
-            def test_sample():
-                assert False
-            """
-        )
-        output = testdir.runpytest(
-            '--force-neo', '--old-summary'
-        ).stdout.str()
-        assert 'test_old_summary.py:4: assert False' in strip_colors(output)
+        assert 'test_new_summary.py:4: AssertionError' in output
 
     def test_xfail_true(self, testdir):
         testdir.makepyfile(
@@ -224,9 +210,9 @@ class TestTerminalReporter(object):
 
         result = testdir.runpytest('--force-neo')
         result.stdout.fnmatch_lines([
-            '*ERROR at teardown of test_foo*',
-            '*1 passed*',
-            '*1 error*'
+            'ERROR at teardown of test_foo',
+            '1 passed',
+            '1 error'
         ])
 
     def test_skipping_tests(self, testdir):

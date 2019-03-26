@@ -24,6 +24,17 @@ __version__ = '0.1.5'
 IS_NEO_ENABLED = False
 
 
+def pytest_addoption(parser):
+    group = parser.getgroup("terminal reporting", "reporting", after="general")
+    group._addoption(
+        '--force-neo', action="store_true",
+        dest="force_neo", default=False,
+        help=(
+            "Force pytest-neo output even when not in real terminal"
+        )
+    )
+
+
 @pytest.mark.trylast
 def pytest_configure(config):
     global IS_NEO_ENABLED
@@ -31,18 +42,21 @@ def pytest_configure(config):
     if config.option.verbose > 0:
         return
 
-    IS_NEO_ENABLED = True
+    if sys.stdout.isatty() or config.getvalue('force_neo'):
+        IS_NEO_ENABLED = True
 
-    # Get the standard terminal reporter plugin and replace it with our
-    standard_reporter = config.pluginmanager.getplugin('terminalreporter')
-    config.pluginmanager.unregister(standard_reporter)
-    neo_reporter = NeoTerminalReporter(config, sys.stdout)
-    config.pluginmanager.register(neo_reporter, 'terminalreporter')
+    if IS_NEO_ENABLED and not getattr(config, 'slaveinput', None):
+        # Get the standard terminal reporter plugin and replace it with our
+        standard_reporter = config.pluginmanager.getplugin('terminalreporter')
+        config.pluginmanager.unregister(standard_reporter)
+        neo_reporter = NeoTerminalReporter(config, sys.stdout)
+        config.pluginmanager.register(neo_reporter, 'terminalreporter')
 
 
 def pytest_report_teststatus(report):
     if not IS_NEO_ENABLED:
         return
+
     if report.passed:
         letter = "."
     elif report.skipped:
@@ -51,6 +65,17 @@ def pytest_report_teststatus(report):
         letter = "F"
         if report.when != "call":
             letter = "f"
+    elif report.outcome == 'rerun':
+        letter = "R"
+    else:
+        letter = "?"
+
+    if hasattr(report, "wasxfail"):
+        if report.skipped:
+            return "xfailed", "x", "xfail"
+        elif report.passed:
+            return "xpassed", "X", "XPASS"
+
     return report.outcome, letter, report.outcome.upper()
 
 
@@ -68,14 +93,20 @@ class NeoTerminalReporter(TerminalReporter):
 
     def tearup(self):
         self.stdscr = curses.initscr()
-        self.stdscr.keypad(True)
+        self.stdscr.keypad(1)
         curses.noecho()
-        curses.cbreak()
+        try:
+            curses.cbreak()
+        except:  # hack for tests
+            pass
         curses.curs_set(0)
         curses.start_color()
         curses.use_default_colors()
-        for i in range(0, curses.COLORS):
-            curses.init_pair(i, i, -1)
+        try:
+            for i in range(0, curses.COLORS):
+                curses.init_pair(i, i, -1)
+        except:
+            pass
 
         self.COLOR_CHAIN = itertools.cycle([
             curses.color_pair(10) ^ curses.A_BOLD,
@@ -85,11 +116,30 @@ class NeoTerminalReporter(TerminalReporter):
 
     def teardown(self):
         if self.stdscr:
+            self.stdscr.keypad(0)
             curses.echo()
-            curses.nocbreak()
-            curses.endwin()
+            try:
+                curses.nocbreak()
+            except:
+                pass
+            try:
+                curses.endwin()
+            except:
+                pass
             _, max_x = self.stdscr.getmaxyx()
             self.print_history(max_x)
+
+    @staticmethod
+    def curses_disable():
+        curses.echo()
+        try:
+            curses.nocbreak()
+        except:  # hack for tests
+            pass
+        try:
+            curses.endwin()
+        except:  # hack for tests
+            pass
 
     def print_history(self, max_x):
         part_count = int(max_x / 2)
@@ -210,12 +260,13 @@ class NeoTerminalReporter(TerminalReporter):
         return super(NeoTerminalReporter, self).pytest_internalerror(excrepr)
 
     def pytest_runtest_logreport(self, report):
-        rep = report
-        res = pytest_report_teststatus(report=rep)
-        cat, letter, word = res
+        cat, letter, word = pytest_report_teststatus(report=report)
         if isinstance(word, tuple):
             word, markup = word
-        self.stats.setdefault(cat, []).append(rep)
+        if report.when == 'call':
+            self.stats.setdefault(cat, []).append(report)
+        elif report.failed:
+            self.stats.setdefault("error", []).append(report)
         self._tests_ran = True
         if not letter and not word:
             # probably passed setup/teardown
