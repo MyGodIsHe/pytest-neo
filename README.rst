@@ -1,6 +1,20 @@
 pytest-neo
 ==========
 
+.. image:: https://img.shields.io/pypi/v/pytest-neo.svg
+    :target: https://pypi.org/project/pytest-neo/
+
+.. image:: https://img.shields.io/pypi/pyversions/pytest-neo.svg
+    :target: https://pypi.org/project/pytest-neo/
+
+.. image:: https://codecov.io/gh/MyGodIsHe/pytest-neo/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/MyGodIsHe/pytest-neo
+    :alt: Code coverage Status
+
+.. image:: https://travis-ci.org/MyGodIsHe/pytest-neo.svg?branch=master
+    :target: https://travis-ci.org/MyGodIsHe/pytest-neo
+
+
 pytest-neo is a plugin for `py.test`_ that shows tests like screen of
 Matrix.
 
