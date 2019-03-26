@@ -129,18 +129,6 @@ class NeoTerminalReporter(TerminalReporter):
             _, max_x = self.stdscr.getmaxyx()
             self.print_history(max_x)
 
-    @staticmethod
-    def curses_disable():
-        curses.echo()
-        try:
-            curses.nocbreak()
-        except:  # hack for tests
-            pass
-        try:
-            curses.endwin()
-        except:  # hack for tests
-            pass
-
     def print_history(self, max_x):
         part_count = int(max_x / 2)
         history = sorted(
