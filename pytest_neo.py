@@ -261,7 +261,6 @@ class NeoTerminalReporter(TerminalReporter):
 
     def pytest_runtest_logreport(self, report):
         cat, letter, word = pytest_report_teststatus(report=report)
-        print('neo, {}, {}, {}, {}\n'.format(report, cat, letter, word))
         if isinstance(word, tuple):
             word, markup = word
         if report.when == 'call' or report.skipped:
