@@ -18,7 +18,7 @@ import pytest
 from _pytest.terminal import TerminalReporter
 
 
-__version__ = '0.1.7'
+__version__ = '0.1.8'
 
 
 IS_NEO_ENABLED = False
@@ -127,6 +127,7 @@ class NeoTerminalReporter(TerminalReporter):
             except curses.error:  # hack for tests
                 pass
             _, max_x = self.stdscr.getmaxyx()
+            self.stdscr = None
             self.print_history(max_x)
 
     def print_history(self, max_x):
