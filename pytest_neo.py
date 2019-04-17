@@ -136,6 +136,7 @@ class NeoTerminalReporter(TerminalReporter):
             except curses.error:  # hack for tests
                 pass
             _, max_x = self.stdscr.getmaxyx()
+            self.stdscr = None
             self.print_history(max_x)
 
     def print_history(self, max_x):
