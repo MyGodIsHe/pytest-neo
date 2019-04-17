@@ -18,7 +18,7 @@ import pytest
 from _pytest.terminal import TerminalReporter
 
 
-__version__ = '0.1.5'
+__version__ = '0.1.7'
 
 
 IS_NEO_ENABLED = False
@@ -167,6 +167,10 @@ class NeoTerminalReporter(TerminalReporter):
     def summary_errors(self):
         self.teardown()
         return super(NeoTerminalReporter, self).summary_errors()
+
+    def _report_keyboardinterrupt(self):
+        self.teardown()
+        super(NeoTerminalReporter, self)._report_keyboardinterrupt()
 
     @staticmethod
     def prepare_fspath(fspath):
