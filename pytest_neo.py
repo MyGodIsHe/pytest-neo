@@ -9,16 +9,20 @@ and feel of py.test.
 :copyright: see LICENSE for details
 :license: BSD, see LICENSE for more details.
 """
+import collections
 import curses
 import itertools
 import os
+import random
 import sys
+import threading
+import time
 
 import pytest
 from _pytest.terminal import TerminalReporter
 
 
-__version__ = '0.1.7'
+__version__ = '0.2.0'
 
 
 IS_NEO_ENABLED = False
@@ -38,9 +42,6 @@ def pytest_addoption(parser):
 @pytest.mark.trylast
 def pytest_configure(config):
     global IS_NEO_ENABLED
-
-    if config.option.verbose > 0:
-        return
 
     if sys.stdout.isatty() or config.getvalue('force_neo'):
         IS_NEO_ENABLED = True
@@ -88,8 +89,9 @@ class NeoTerminalReporter(TerminalReporter):
         self.column_color = None
         self.COLOR_CHAIN = []
         self.previous_char = None
-        self.history = {}
+        self.history = collections.defaultdict(list)
         self._show_progress_info = False
+        self.verbose_reporter = None
 
     def tearup(self):
         self.stdscr = curses.initscr()
@@ -113,8 +115,14 @@ class NeoTerminalReporter(TerminalReporter):
             curses.color_pair(2),
             curses.color_pair(10),
         ])
+        if self.verbosity > 0:
+            self.verbose_reporter = VerboseReporter(self.stdscr, 0.1)
+            self.verbose_reporter.start()
 
     def teardown(self):
+        if self.verbose_reporter:
+            self.verbose_reporter.join()
+
         if self.stdscr:
             self.stdscr.keypad(0)
             curses.echo()
@@ -175,9 +183,16 @@ class NeoTerminalReporter(TerminalReporter):
     @staticmethod
     def prepare_fspath(fspath):
         name = os.path.basename(str(fspath))
+        parts = name.split('::', 1)
+        name = parts[0]
         name = os.path.splitext(name)[0]
         if name.startswith('test_'):
             name = name[5:]
+        if len(parts) == 2:
+            name = '{}▒{}'.format(
+                name,
+                parts[1].replace('[', '▄').replace(']', '▀')
+            )
         return name.replace('_', '|')
 
     def can_write(self, top, left):
@@ -240,7 +255,6 @@ class NeoTerminalReporter(TerminalReporter):
             if self.left >= max_x:
                 self.left = 0
             self.write_new_column()
-            self.history[self.currentfspath] = []
 
     @pytest.hookimpl(trylast=True)
     def pytest_collection_modifyitems(self):
@@ -250,6 +264,16 @@ class NeoTerminalReporter(TerminalReporter):
     def pytest_internalerror(self, excrepr):
         self.teardown()
         return super(NeoTerminalReporter, self).pytest_internalerror(excrepr)
+
+    def pytest_runtest_logstart(self, nodeid, location):
+        if self.verbosity <= 0:
+            fsid = nodeid.split("::")[0]
+            self.write_fspath_result(fsid, "")
+        else:
+            self.verbose_reporter.add_nodeid(
+                self.prepare_fspath(nodeid),
+                next(self.COLOR_CHAIN)
+            )
 
     def pytest_runtest_logreport(self, report):
         cat, letter, word = pytest_report_teststatus(report=report)
@@ -263,14 +287,75 @@ class NeoTerminalReporter(TerminalReporter):
         if not letter and not word:
             # probably passed setup/teardown
             return
-        if report.when == 'setup':
-            if not self.can_write(self.top, self.left):
-                self.left += 1
-                self.write_new_column()
-        if report.when == 'teardown':
-            self.top += 1
-        else:
-            self.addstr(letter, self.column_color)
-            self.stdscr.refresh()
+
+        if report.when != 'teardown':
             if report.when == 'call' or report.skipped:
-                self.history[self.currentfspath].append(letter)
+                self.history[report.nodeid.split('::')[0]].append(letter)
+
+        if self.verbosity <= 0:
+            if report.when == 'setup':
+                if not self.can_write(self.top, self.left):
+                    self.left += 1
+                    self.write_new_column()
+            if report.when == 'teardown':
+                self.top += 1
+            else:
+                self.addstr(letter, self.column_color)
+                self.stdscr.refresh()
+
+
+class Blob(object):
+
+    def __init__(self, items, column, color):
+        self._items = items
+        self._index = 0
+        self._column = column
+        self._color = color
+        self._length = len(items)
+
+    def draw(self, stdscr):
+        for top, letter in enumerate(self._items[:self._index]):
+            stdscr.addstr(
+                top, self._column,
+                letter, self._color
+            )
+            stdscr.refresh()
+        stdscr.addstr(
+            self._index, self._column,
+            self._items[self._index], curses.color_pair(0) ^ curses.A_BOLD
+        )
+        stdscr.refresh()
+        self._index += 1
+        return self._index >= self._length
+
+
+class VerboseReporter(threading.Thread):
+
+    def __init__(self, stdscr, speed):
+        super(VerboseReporter, self).__init__(daemon=True)
+        self.stdscr = stdscr
+        self.blobs = []
+        self.speed = speed
+
+    def run(self):
+        while True:
+            self.draw()
+            time.sleep(self.speed)
+
+    def get_random_column(self):
+        _, max_x = self.stdscr.getmaxyx()
+        #return 0
+        #return max_x
+        return random.randint(0, max_x)
+
+    def draw(self):
+        delete_list = []
+        for blob in self.blobs:
+            need_delete = blob.draw(self.stdscr)
+            if need_delete:
+                delete_list.append(blob)
+        for blob in delete_list:
+            self.blobs.remove(blob)
+
+    def add_nodeid(self, nodeid, color):
+        self.blobs.append(Blob(nodeid, self.get_random_column(), color))
