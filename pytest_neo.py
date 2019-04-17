@@ -116,7 +116,7 @@ class NeoTerminalReporter(TerminalReporter):
             curses.color_pair(10),
         ])
         if self.verbosity > 0:
-            self.verbose_reporter = VerboseReporter(self.stdscr, 0.1)
+            self.verbose_reporter = VerboseReporter(self.stdscr, 0.1, 1)
             self.verbose_reporter.setDaemon(True)
             self.verbose_reporter.start()
 
@@ -307,12 +307,22 @@ class NeoTerminalReporter(TerminalReporter):
 
 class Blob(object):
 
-    def __init__(self, items, column, color):
+    def __init__(self, items, column, color, speed):
+        self.speed = speed
         self._items = items
-        self._index = 0
         self._column = column
         self._color = color
+        self._index = 0
         self._length = len(items)
+        self._last_draw = time.time() - self.speed
+
+    @property
+    def column(self):
+        return self._column
+
+    @property
+    def index(self):
+        return self._index
 
     def draw(self, stdscr):
         for top, letter in enumerate(self._items[:self._index]):
@@ -327,36 +337,64 @@ class Blob(object):
         )
         stdscr.refresh()
         self._index += 1
+        self._last_draw = time.time()
         return self._index >= self._length
+
+    def can_draw(self, current_time):
+        return current_time - self._last_draw > self.speed
 
 
 class VerboseReporter(threading.Thread):
+    REFRESH_INTERVAL = 0.01
 
-    def __init__(self, stdscr, speed):
+    def __init__(self, stdscr, speed_min, speed_max):
         super(VerboseReporter, self).__init__()
         self.stdscr = stdscr
         self.blobs = []
-        self.speed = speed
+        assert self.REFRESH_INTERVAL < speed_min < speed_max
+        self.speed_min = speed_min
+        self.speed_max = speed_max
 
     def run(self):
         while True:
             self.draw()
-            time.sleep(self.speed)
+            time.sleep(self.REFRESH_INTERVAL)
 
     def get_random_column(self):
-        _, max_x = self.stdscr.getmaxyx()
-        #return 0
-        #return max_x
-        return random.randint(0, max_x)
+        max_y, max_x = self.stdscr.getmaxyx()
+        cols = {n: max_y for n in range(max_x)}
+        for blob in self.blobs:
+            cols[blob.column] = min(cols[blob.column], blob.index)
+        variants = collections.defaultdict(list)
+        for column, index in cols.items():
+            variants[index].append(column)
+        best_variant = sorted(
+            variants.items(),
+            key=lambda item: item[0]
+        )[-1][1]
+        return random.choice(best_variant)
 
     def draw(self):
+        current_time = time.time()
         delete_list = []
         for blob in self.blobs:
-            need_delete = blob.draw(self.stdscr)
-            if need_delete:
-                delete_list.append(blob)
+            if blob.can_draw(current_time):
+                need_delete = blob.draw(self.stdscr)
+                if need_delete:
+                    delete_list.append(blob)
         for blob in delete_list:
             self.blobs.remove(blob)
 
+    def get_speed(self):
+        delta = self.speed_max - self.speed_min
+        return self.speed_min + delta * random.random()
+
     def add_nodeid(self, nodeid, color):
-        self.blobs.append(Blob(nodeid, self.get_random_column(), color))
+        self.blobs.append(
+            Blob(
+                nodeid,
+                self.get_random_column(),
+                color,
+                self.get_speed()
+            )
+        )
