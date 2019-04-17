@@ -117,6 +117,7 @@ class NeoTerminalReporter(TerminalReporter):
         ])
         if self.verbosity > 0:
             self.verbose_reporter = VerboseReporter(self.stdscr, 0.1)
+            self.verbose_reporter.setDaemon(True)
             self.verbose_reporter.start()
 
     def teardown(self):
@@ -332,7 +333,7 @@ class Blob(object):
 class VerboseReporter(threading.Thread):
 
     def __init__(self, stdscr, speed):
-        super(VerboseReporter, self).__init__(daemon=True)
+        super(VerboseReporter, self).__init__()
         self.stdscr = stdscr
         self.blobs = []
         self.speed = speed
