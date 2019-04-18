@@ -449,6 +449,7 @@ class TestTerminalReporter(object):
         )
         assert_count(testdir, '--verbose')
 
+    @pytest.mark.skip
     def test_verbose_has_double_colon(self, testdir):
         testdir.makepyfile(
             """
