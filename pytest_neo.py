@@ -116,7 +116,7 @@ class NeoTerminalReporter(TerminalReporter):
             curses.color_pair(10),
         ])
         if self.verbosity > 0:
-            self.verbose_reporter = VerboseReporter(self.stdscr, 0.01, 0.1)
+            self.verbose_reporter = VerboseReporter(self.stdscr, 0.05, 0.2)
             self.verbose_reporter.start()
 
     def teardown(self):
@@ -194,9 +194,16 @@ class NeoTerminalReporter(TerminalReporter):
         if len(parts) == 2:
             name = '{}▒{}'.format(
                 name,
-                parts[1].replace('[', '▄').replace(']', '▀')
+                parts[1]
             )
-        return name.replace('_', '|')
+        for pairs in [
+            ('_', '|'),
+            ('-', '|'),
+            ('[', '▄'),
+            (']', '▀')
+        ]:
+            name = name.replace(*pairs)
+        return name
 
     def fix_coordinate(self):
         max_y, max_x = self.stdscr.getmaxyx()
@@ -313,7 +320,8 @@ def can_write(stdscr, top, left):
 
 class Blob(object):
 
-    def __init__(self, items, column, color, speed):
+    def __init__(self, items, column, color, speed, size):
+        self.size = size
         self.speed = speed
         self._items = items
         self._column = column
@@ -335,7 +343,7 @@ class Blob(object):
             (self._index - 1, self._color),
             (self._index, curses.color_pair(0) ^ curses.A_BOLD)
         ]:
-            if not can_write(stdscr, top, self._column):
+            if top >= self._length or not can_write(stdscr, top, self._column):
                 break
             letter = self._items[top]
             stdscr.addstr(
@@ -344,7 +352,7 @@ class Blob(object):
             )
         self._index += 1
         self._last_draw = time.time()
-        return self._index >= self._length
+        return self._index - self.size >= self._length
 
     def can_draw(self, current_time):
         return current_time - self._last_draw > self.speed
@@ -356,7 +364,7 @@ class VerboseReporter(threading.Thread):
     def __init__(self, stdscr, speed_min, speed_max):
         super(VerboseReporter, self).__init__()
         self.stdscr = stdscr
-        self.blobs = []
+        self.blobs = collections.defaultdict(list)
         assert self.REFRESH_INTERVAL <= speed_min < speed_max
         self.speed_min = speed_min
         self.speed_max = speed_max
@@ -367,14 +375,20 @@ class VerboseReporter(threading.Thread):
 
     def run(self):
         while not self._killed:
-            self.draw()
+            try:
+                self.draw()
+            except Exception as exc:
+                with open('t', 'w') as f:
+                    import traceback
+                    f.write(''.join(traceback.format_tb(exc.__traceback__)))
             time.sleep(self.REFRESH_INTERVAL)
 
     def get_random_column(self):
         max_y, max_x = self.stdscr.getmaxyx()
         cols = {n: max_y for n in range(max_x)}
-        for blob in self.blobs:
-            cols[blob.column] = min(cols[blob.column], blob.index)
+        for column, blobs in self.blobs.items():
+            for blob in blobs:
+                cols[column] = min(cols[column], blob.index)
         variants = collections.defaultdict(list)
         for column, index in cols.items():
             variants[index].append(column)
@@ -386,14 +400,19 @@ class VerboseReporter(threading.Thread):
 
     def draw(self):
         current_time = time.time()
-        delete_list = []
-        for blob in self.blobs:
-            if blob.can_draw(current_time):
-                need_delete = blob.draw(self.stdscr)
-                if need_delete:
-                    delete_list.append(blob)
-        for blob in delete_list:
-            self.blobs.remove(blob)
+        for column, blobs in self.blobs.items():
+            delete_list = []
+            for blob, next_blob in zip(blobs, blobs[1:] + [None]):
+                top_limit = next_blob.index if next_blob else -1
+                erase_top = blob.index - blob.size
+                if erase_top > top_limit and can_write(self.stdscr, erase_top, column):
+                    self.stdscr.addstr(erase_top, column, ' ')
+                if blob.can_draw(current_time):
+                    need_delete = blob.draw(self.stdscr)
+                    if need_delete:
+                        delete_list.append(blob)
+            for blob in delete_list:
+                blobs.remove(blob)
         # it's impossible in threading, so sad
         #self.stdscr.refresh()
 
@@ -402,11 +421,13 @@ class VerboseReporter(threading.Thread):
         return self.speed_min + delta * random.random()
 
     def add_nodeid(self, nodeid, color):
-        self.blobs.append(
+        column = self.get_random_column()
+        self.blobs[column].append(
             Blob(
                 nodeid,
-                self.get_random_column(),
+                column,
                 color,
-                self.get_speed()
+                self.get_speed(),
+                random.randint(20, 40)
             )
         )
