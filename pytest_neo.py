@@ -405,7 +405,8 @@ class VerboseReporter(threading.Thread):
             for blob, next_blob in zip(blobs, blobs[1:] + [None]):
                 top_limit = next_blob.index if next_blob else -1
                 erase_top = blob.index - blob.size
-                if erase_top > top_limit and can_write(self.stdscr, erase_top, column):
+                if erase_top > top_limit and can_write(
+                        self.stdscr, erase_top, column):
                     self.stdscr.addstr(erase_top, column, ' ')
                 if blob.can_draw(current_time):
                     need_delete = blob.draw(self.stdscr)
@@ -414,7 +415,7 @@ class VerboseReporter(threading.Thread):
             for blob in delete_list:
                 blobs.remove(blob)
         # it's impossible in threading, so sad
-        #self.stdscr.refresh()
+        # self.stdscr.refresh()
 
     def get_speed(self):
         delta = self.speed_max - self.speed_min
