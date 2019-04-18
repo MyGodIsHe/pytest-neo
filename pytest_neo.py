@@ -116,13 +116,14 @@ class NeoTerminalReporter(TerminalReporter):
             curses.color_pair(10),
         ])
         if self.verbosity > 0:
-            self.verbose_reporter = VerboseReporter(self.stdscr, 0.1, 1)
-            self.verbose_reporter.setDaemon(True)
+            self.verbose_reporter = VerboseReporter(self.stdscr, 0.01, 0.1)
             self.verbose_reporter.start()
 
     def teardown(self):
         if self.verbose_reporter:
+            self.verbose_reporter.kill()
             self.verbose_reporter.join()
+            self.verbose_reporter = None
 
         if self.stdscr:
             self.stdscr.keypad(0)
@@ -197,16 +198,6 @@ class NeoTerminalReporter(TerminalReporter):
             )
         return name.replace('_', '|')
 
-    def can_write(self, top, left):
-        max_y, max_x = self.stdscr.getmaxyx()
-        if (max_y - 1, max_x - 1) == (top, left):
-            return False
-        if top >= max_y:
-            return False
-        if left >= max_x:
-            return False
-        return True
-
     def fix_coordinate(self):
         max_y, max_x = self.stdscr.getmaxyx()
         if (max_y - 1, max_x - 1) == (self.top, self.left):
@@ -231,7 +222,7 @@ class NeoTerminalReporter(TerminalReporter):
     def clear_column(self, left):
         max_y, max_x = self.stdscr.getmaxyx()
         for top in range(max_y):
-            if self.can_write(top, left):
+            if can_write(self.stdscr, top, left):
                 self.stdscr.addstr(top, left, ' ')
         self.stdscr.refresh()
 
@@ -276,6 +267,7 @@ class NeoTerminalReporter(TerminalReporter):
                 self.prepare_fspath(nodeid),
                 next(self.COLOR_CHAIN)
             )
+            self.stdscr.refresh()
 
     def pytest_runtest_logreport(self, report):
         cat, letter, word = pytest_report_teststatus(report=report)
@@ -296,7 +288,7 @@ class NeoTerminalReporter(TerminalReporter):
 
         if self.verbosity <= 0:
             if report.when == 'setup':
-                if not self.can_write(self.top, self.left):
+                if not can_write(self.stdscr, self.top, self.left):
                     self.left += 1
                     self.write_new_column()
             if report.when == 'teardown':
@@ -304,6 +296,19 @@ class NeoTerminalReporter(TerminalReporter):
             else:
                 self.addstr(letter, self.column_color)
                 self.stdscr.refresh()
+
+
+def can_write(stdscr, top, left):
+    if top < 0 or left < 0:
+        return False
+    max_y, max_x = stdscr.getmaxyx()
+    if (max_y - 1, max_x - 1) == (top, left):
+        return False
+    if top >= max_y:
+        return False
+    if left >= max_x:
+        return False
+    return True
 
 
 class Blob(object):
@@ -326,17 +331,17 @@ class Blob(object):
         return self._index
 
     def draw(self, stdscr):
-        for top, letter in enumerate(self._items[:self._index]):
+        for top, color in [
+            (self._index - 1, self._color),
+            (self._index, curses.color_pair(0) ^ curses.A_BOLD)
+        ]:
+            if not can_write(stdscr, top, self._column):
+                break
+            letter = self._items[top]
             stdscr.addstr(
                 top, self._column,
-                letter, self._color
+                letter, color
             )
-            stdscr.refresh()
-        stdscr.addstr(
-            self._index, self._column,
-            self._items[self._index], curses.color_pair(0) ^ curses.A_BOLD
-        )
-        stdscr.refresh()
         self._index += 1
         self._last_draw = time.time()
         return self._index >= self._length
@@ -352,12 +357,16 @@ class VerboseReporter(threading.Thread):
         super(VerboseReporter, self).__init__()
         self.stdscr = stdscr
         self.blobs = []
-        assert self.REFRESH_INTERVAL < speed_min < speed_max
+        assert self.REFRESH_INTERVAL <= speed_min < speed_max
         self.speed_min = speed_min
         self.speed_max = speed_max
+        self._killed = False
+
+    def kill(self):
+        self._killed = True
 
     def run(self):
-        while True:
+        while not self._killed:
             self.draw()
             time.sleep(self.REFRESH_INTERVAL)
 
@@ -385,6 +394,8 @@ class VerboseReporter(threading.Thread):
                     delete_list.append(blob)
         for blob in delete_list:
             self.blobs.remove(blob)
+        # it's impossible in threading, so sad
+        #self.stdscr.refresh()
 
     def get_speed(self):
         delta = self.speed_max - self.speed_min
