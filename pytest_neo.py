@@ -25,6 +25,8 @@ from _pytest.terminal import TerminalReporter
 __version__ = '0.2.0'
 
 
+BLOB_SIZE = (10, 20)
+BLOB_SPEED = (0.1, 0.2)
 IS_NEO_ENABLED = False
 
 
@@ -116,7 +118,7 @@ class NeoTerminalReporter(TerminalReporter):
             curses.color_pair(10),
         ])
         if self.verbosity > 0:
-            self.verbose_reporter = VerboseReporter(self.stdscr, 0.05, 0.2)
+            self.verbose_reporter = VerboseReporter(self.stdscr, *BLOB_SPEED)
             self.verbose_reporter.start()
 
     def teardown(self):
@@ -429,6 +431,6 @@ class VerboseReporter(threading.Thread):
                 column,
                 color,
                 self.get_speed(),
-                random.randint(20, 40)
+                random.randint(*BLOB_SIZE)
             )
         )
