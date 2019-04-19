@@ -3,7 +3,7 @@ Changelog
 
 A list of changes between each release.
 
-0.2.0 (2019-04-18)
+0.2.0 (2019-04-19)
 ^^^^^^^^^^^^^^^^^^
 
 - Add verbose mode
