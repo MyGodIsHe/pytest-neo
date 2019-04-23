@@ -12,10 +12,10 @@ and feel of py.test.
 import collections
 import curses
 import itertools
+import multiprocessing
 import os
 import random
 import sys
-import threading
 import time
 
 import pytest
@@ -123,7 +123,7 @@ class NeoTerminalReporter(TerminalReporter):
 
     def teardown(self):
         if self.verbose_reporter:
-            self.verbose_reporter.kill()
+            self.verbose_reporter.exit.set()
             self.verbose_reporter.join()
             self.verbose_reporter = None
 
@@ -272,11 +272,10 @@ class NeoTerminalReporter(TerminalReporter):
             fsid = nodeid.split("::")[0]
             self.write_fspath_result(fsid, "")
         else:
-            self.verbose_reporter.add_nodeid(
+            self.verbose_reporter.queue.put((
                 self.prepare_fspath(nodeid),
                 next(self.COLOR_CHAIN)
-            )
-            self.stdscr.refresh()
+            ))
 
     def pytest_runtest_logreport(self, report):
         cat, letter, word = pytest_report_teststatus(report=report)
@@ -360,7 +359,7 @@ class Blob(object):
         return current_time - self._last_draw > self.speed
 
 
-class VerboseReporter(threading.Thread):
+class VerboseReporter(multiprocessing.Process):
     REFRESH_INTERVAL = 0.01
 
     def __init__(self, stdscr, speed_min, speed_max):
@@ -371,19 +370,20 @@ class VerboseReporter(threading.Thread):
         self.speed_min = speed_min
         self.speed_max = speed_max
         self._killed = False
-
-    def kill(self):
-        self._killed = True
+        self.queue = multiprocessing.Queue()
+        self.exit = multiprocessing.Event()
 
     def run(self):
-        while not self._killed:
-            try:
+        try:
+            while not self.exit.is_set():
+                if not self.queue.empty():
+                    data = self.queue.get_nowait()
+                    if data:
+                        self.add_nodeid(*data)
                 self.draw()
-            except Exception as exc:
-                with open('t', 'w') as f:
-                    import traceback
-                    f.write(''.join(traceback.format_tb(exc.__traceback__)))
-            time.sleep(self.REFRESH_INTERVAL)
+                time.sleep(self.REFRESH_INTERVAL)
+        except KeyboardInterrupt:
+            pass
 
     def get_random_column(self):
         max_y, max_x = self.stdscr.getmaxyx()
@@ -416,8 +416,7 @@ class VerboseReporter(threading.Thread):
                         delete_list.append(blob)
             for blob in delete_list:
                 blobs.remove(blob)
-        # it's impossible in threading, so sad
-        # self.stdscr.refresh()
+        self.stdscr.refresh()
 
     def get_speed(self):
         delta = self.speed_max - self.speed_min
