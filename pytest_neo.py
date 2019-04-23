@@ -22,7 +22,7 @@ import pytest
 from _pytest.terminal import TerminalReporter
 
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 
 
 BLOB_SIZE = (10, 20)
