@@ -276,7 +276,6 @@ class NeoTerminalReporter(TerminalReporter):
                 self.prepare_fspath(nodeid),
                 next(self.COLOR_CHAIN)
             ))
-            #self.stdscr.refresh()
 
     def pytest_runtest_logreport(self, report):
         cat, letter, word = pytest_report_teststatus(report=report)
