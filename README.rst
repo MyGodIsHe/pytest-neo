@@ -13,6 +13,9 @@ pytest-neo
 
 .. image:: https://travis-ci.org/MyGodIsHe/pytest-neo.svg?branch=master
     :target: https://travis-ci.org/MyGodIsHe/pytest-neo
+  
+.. image:: https://img.shields.io/pypi/dm/pytest-neo.svg
+    :target: https://pypi.python.org/pypi/pytest-neo
 
 
 pytest-neo is a plugin for `py.test`_ that shows tests like screen of
