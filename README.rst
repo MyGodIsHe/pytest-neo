@@ -21,6 +21,8 @@ pytest-neo
 pytest-neo is a plugin for `py.test`_ that shows tests like screen of
 Matrix.
 
+.. image:: https://raw.githubusercontent.com/MyGodIsHe/pytest-neo/master/doc/readme_screen.png
+
 Requirements
 ------------
 
