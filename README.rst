@@ -28,7 +28,7 @@ Requirements
 
 You will need the following prerequisites in order to use pytest-neo:
 
--  Python 3.7 or newer
+-  Python 3.6 or newer
 -  pytest 6.2.5 or newer
 
 Installation
