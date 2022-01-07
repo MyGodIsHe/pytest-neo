@@ -10,9 +10,6 @@ pytest-neo
 .. image:: https://codecov.io/gh/MyGodIsHe/pytest-neo/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/MyGodIsHe/pytest-neo
     :alt: Code coverage Status
-
-.. image:: https://travis-ci.org/MyGodIsHe/pytest-neo.svg?branch=master
-    :target: https://travis-ci.org/MyGodIsHe/pytest-neo
   
 .. image:: https://img.shields.io/pypi/dm/pytest-neo.svg
     :target: https://pypi.python.org/pypi/pytest-neo
