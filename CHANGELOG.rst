@@ -3,6 +3,11 @@ Changelog
 
 A list of changes between each release.
 
+0.2.2 (2022-01-07)
+^^^^^^^^^^^^^^^^^^
+
+- Migrate to pytest 6
+
 0.2.1 (2019-04-23)
 ^^^^^^^^^^^^^^^^^^
 

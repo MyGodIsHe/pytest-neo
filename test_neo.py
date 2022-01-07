@@ -477,7 +477,7 @@ class TestTerminalReporter(object):
                     \"\"\"
             """
         )
-        result = testdir.runpytest('--force-neo', '--doctest-module')
+        result = testdir.runpytest('--force-neo', '--doctest-modules')
 
         assert result.ret == 1, result.stderr.str()
 
