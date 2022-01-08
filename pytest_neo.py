@@ -22,7 +22,7 @@ import time
 import pytest
 from _pytest.terminal import TerminalReporter
 
-__version__ = '0.2.3'
+__version__ = '0.2.4'
 
 BLOB_SIZE = (10, 20)
 BLOB_SPEED = (0.1, 0.2)
