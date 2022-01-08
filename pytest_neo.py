@@ -3,7 +3,7 @@
 pytest_neo
 ~~~~~~~~~~~~
 
-py.test is a plugin for py.test that changes the default look
+pytest_neo is a plugin for py.test that changes the default look
 and feel of py.test.
 
 :copyright: see LICENSE for details
