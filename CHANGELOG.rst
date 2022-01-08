@@ -3,6 +3,11 @@ Changelog
 
 A list of changes between each release.
 
+0.2.5 (2022-01-08)
+^^^^^^^^^^^^^^^^^^
+
+- Fix verbose mode for mac
+
 0.2.4 (2022-01-08)
 ^^^^^^^^^^^^^^^^^^
 
