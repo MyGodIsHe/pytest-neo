@@ -1,9 +1,6 @@
 pytest-neo
 ==========
 
-.. image:: https://img.shields.io/pypi/v/pytest-neo.svg
-    :target: https://pypi.org/project/pytest-neo/
-
 .. image:: https://img.shields.io/pypi/pyversions/pytest-neo.svg
     :target: https://pypi.org/project/pytest-neo/
 
@@ -26,7 +23,7 @@ Requirements
 You will need the following prerequisites in order to use pytest-neo:
 
 -  Python 3.6 or newer
--  pytest 6.2.5 or newer
+-  pytest 6.2.0 or newer
 
 Installation
 ------------
