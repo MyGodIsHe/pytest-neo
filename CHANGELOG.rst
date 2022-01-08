@@ -3,6 +3,11 @@ Changelog
 
 A list of changes between each release.
 
+0.2.3 (2022-01-08)
+^^^^^^^^^^^^^^^^^^
+
+- Fix verbose mode
+
 0.2.2 (2022-01-07)
 ^^^^^^^^^^^^^^^^^^
 
