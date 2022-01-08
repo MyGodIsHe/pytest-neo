@@ -46,4 +46,4 @@ If you would like to run tests without pytest-neo, use:
 
    $ pytest -p no:neo
 
-.. _py.test: http://pytest.org
+.. _pytest: http://pytest.org
