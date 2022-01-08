@@ -12,17 +12,17 @@ and feel of py.test.
 import collections
 import curses
 import itertools
+import multiprocessing
 import os
 import queue
 import random
 import sys
-import threading
 import time
 
 import pytest
 from _pytest.terminal import TerminalReporter
 
-__version__ = '0.2.2'
+__version__ = '0.2.3'
 
 BLOB_SIZE = (10, 20)
 BLOB_SPEED = (0.1, 0.2)
@@ -258,8 +258,8 @@ class NeoTerminalReporter(TerminalReporter):
             self.write_new_column()
 
     @pytest.hookimpl(trylast=True)
-    def pytest_sessionstart(self, session):
-        super(NeoTerminalReporter, self).pytest_sessionstart(session)
+    def pytest_collection_finish(self, session):
+        super(NeoTerminalReporter, self).pytest_collection_finish(session)
         self.tearup()
 
     def pytest_internalerror(self, excrepr):
@@ -358,7 +358,7 @@ class Blob(object):
         return current_time - self._last_draw > self.speed
 
 
-class VerboseReporter(threading.Thread):
+class VerboseReporter(multiprocessing.Process):
     REFRESH_INTERVAL = 0.01
 
     def __init__(self, stdscr, speed_min, speed_max):
@@ -369,8 +369,8 @@ class VerboseReporter(threading.Thread):
         self.speed_min = speed_min
         self.speed_max = speed_max
         self._killed = False
-        self.queue = queue.Queue()
-        self.exit = threading.Event()
+        self.queue = multiprocessing.Queue()
+        self.exit = multiprocessing.Event()
 
     def run(self):
         try:
