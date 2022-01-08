@@ -12,7 +12,7 @@ pytest-neo
     :target: https://pypi.python.org/pypi/pytest-neo
 
 
-pytest-neo is a plugin for `py.test`_ that shows tests like screen of
+pytest-neo is a plugin for `pytest`_ that shows tests like screen of
 Matrix.
 
 .. image:: https://raw.githubusercontent.com/MyGodIsHe/pytest-neo/master/doc/readme_screen.png
@@ -34,16 +34,16 @@ To install pytest-neo:
 
    $ pip install pytest-neo
 
-Then run your tests with:
+Then run your tests with (or verbose mode with a different visualization):
 
 ::
 
-   $ py.test
+   $ pytest
 
 If you would like to run tests without pytest-neo, use:
 
 ::
 
-   $ py.test -p no:neo
+   $ pytest -p no:neo
 
 .. _py.test: http://pytest.org
