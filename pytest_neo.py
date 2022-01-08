@@ -14,7 +14,6 @@ import curses
 import itertools
 import multiprocessing
 import os
-import queue
 import random
 import sys
 import time
