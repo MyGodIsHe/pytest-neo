@@ -3,6 +3,11 @@ Changelog
 
 A list of changes between each release.
 
+0.2.4 (2022-01-08)
+^^^^^^^^^^^^^^^^^^
+
+- Downgrade pytest
+
 0.2.3 (2022-01-08)
 ^^^^^^^^^^^^^^^^^^
 
