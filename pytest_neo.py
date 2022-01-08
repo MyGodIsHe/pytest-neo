@@ -21,7 +21,7 @@ import time
 import pytest
 from _pytest.terminal import TerminalReporter
 
-__version__ = '0.2.4'
+__version__ = '0.2.5'
 
 BLOB_SIZE = (10, 20)
 BLOB_SPEED = (0.1, 0.2)
@@ -94,29 +94,14 @@ class NeoTerminalReporter(TerminalReporter):
         self.verbose_reporter = None
 
     def tearup(self):
-        self.stdscr = curses.initscr()
-        self.stdscr.keypad(1)
-        curses.noecho()
-        try:
-            curses.cbreak()
-        except curses.error:  # hack for tests
-            pass
-        curses.curs_set(0)
-        curses.start_color()
-        curses.use_default_colors()
-        try:
-            for i in range(0, curses.COLORS):
-                curses.init_pair(i, i, -1)
-        except curses.error:  # hack for tests
-            pass
-
+        self.stdscr = create_stdscr()
         self.COLOR_CHAIN = itertools.cycle([
             curses.color_pair(10) ^ curses.A_BOLD,
             curses.color_pair(2),
             curses.color_pair(10),
         ])
         if self.verbosity > 0:
-            self.verbose_reporter = VerboseReporter(self.stdscr, *BLOB_SPEED)
+            self.verbose_reporter = VerboseReporter(*BLOB_SPEED)
             self.verbose_reporter.start()
 
     def teardown(self):
@@ -360,9 +345,8 @@ class Blob(object):
 class VerboseReporter(multiprocessing.Process):
     REFRESH_INTERVAL = 0.01
 
-    def __init__(self, stdscr, speed_min, speed_max):
+    def __init__(self, speed_min, speed_max):
         super(VerboseReporter, self).__init__()
-        self.stdscr = stdscr
         self.blobs = collections.defaultdict(list)
         assert self.REFRESH_INTERVAL <= speed_min < speed_max
         self.speed_min = speed_min
@@ -372,6 +356,7 @@ class VerboseReporter(multiprocessing.Process):
         self.exit = multiprocessing.Event()
 
     def run(self):
+        self.stdscr = create_stdscr()
         try:
             while not self.exit.is_set():
                 if not self.queue.empty():
@@ -431,3 +416,23 @@ class VerboseReporter(multiprocessing.Process):
                 random.randint(*BLOB_SIZE)
             )
         )
+
+
+def create_stdscr():
+    stdscr = curses.initscr()
+    stdscr.keypad(1)
+    curses.noecho()
+    try:
+        curses.cbreak()
+    except curses.error:  # hack for tests
+        pass
+    curses.curs_set(0)
+    curses.start_color()
+    curses.use_default_colors()
+    try:
+        for i in range(0, curses.COLORS):
+            curses.init_pair(i, i, -1)
+    except curses.error:  # hack for tests
+        pass
+
+    return stdscr
